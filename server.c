@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 
     bind(sockfd, (struct sockaddr *) &server_address, sizeof(server_address));
 
-    char k;
+    char k = 0;
 
     while (k != 'q') {
         /* Wait for client to connect */

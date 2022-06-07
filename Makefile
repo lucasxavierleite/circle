@@ -1,3 +1,3 @@
 all:
-	gcc connection.c server.c -o server
-	gcc connection.c client.c -o client
+	gcc -g -Wall -lm connection.c server.c -o server
+	gcc -g -Wall -lm connection.c client.c -o client
