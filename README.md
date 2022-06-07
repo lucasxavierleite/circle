@@ -1,12 +1,12 @@
 # circle
-IRC chat application for a Computer Networks assignment at ICMC - USP
+IRC chat application for a Computer Networks assignment at ICMC - USP </br>
 
-Altair Fernando Pereira Junior, 9391831
-Osni Brito de Jesus, 11857330
-Lucas Xavier Leite, 10783347
+Altair Fernando Pereira Junior, 9391831 <br/>
+Osni Brito de Jesus, 11857330 <br/>
+Lucas Xavier Leite, 10783347 <br/>
 
-Operating system: Arch Linux 5.18.1-arch1-1 x86_64 GNU/Linux
-Compiler: gcc version 12.1.0
+Operating system: Arch Linux 5.18.1-arch1-1 x86_64 GNU/Linux <br/>
+Compiler: gcc version 12.1.0 <br/>
 
 ## Instructions:
 
