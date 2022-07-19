@@ -1,3 +1,8 @@
 all:
-	gcc -g -Wall -lm connection.c server.c -o server
-	gcc -g -Wall -lm connection.c client.c -o client
+	g++ -g -Wall circle_server.cpp Server.cpp Client.cpp messages.cpp -o circle_server
+
+clean:
+	rm circle_server
+
+run_server:
+	./circle_server $(port)
