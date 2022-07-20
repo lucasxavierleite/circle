@@ -1,5 +1,5 @@
 #include "Server.h"
-#include "messages.h"
+#include "server_messages.h"
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -15,14 +15,14 @@
 #include <cerrno>
 #include <pthread.h>
 
-namespace circle {
+namespace circle_server {
     pthread_t Server::tid;
     int Server::socket_fd;
     struct sockaddr_in Server::address;
     const char *Server::ip_address;
     int Server::port;
     pthread_mutex_t Server::clients_mutex;
-    std::vector<Client> Server::clients;
+    std::vector<User> Server::clients;
     bool Server::log;
 
     Server::Server() {
@@ -63,6 +63,8 @@ namespace circle {
 
         std::cout << "Server " << Server::ip_address << " listening on port " << Server::port << std::endl;
 
+        print_log(ctrl_message(SERVER_EMPTY));
+
         if (::listen(Server::socket_fd, MAX_CLIENTS_CONNECTED) == -1) {
             print_error("Error listening to clients");
             close(Server::socket_fd);
@@ -79,7 +81,7 @@ namespace circle {
                 break;
             }
 
-            Client client = Client(client_socket_fd, client_address);
+            User client = User(client_socket_fd, client_address);
             add_client(client);
             pthread_create(&tid, nullptr, &handle_client, static_cast<void *>(&client));
             sleep(1);
@@ -87,29 +89,41 @@ namespace circle {
     }
 
     void *Server::handle_client(void *arg) {
-        Client client = *((Client *) arg);
+        User client = *((User *) arg);
 
         send_response_message(client, ctrl_message(CLIENT_ENTER_NICKNAME));
 
-        char client_nickname[NICKNAME_MAX_CHARACTERS];
-        while (recv(client.get_socket_fd(), &client_nickname, sizeof(client_nickname), 0) == -1) {
+        ssize_t bytes_received_nickname;
+        char client_nickname[MESSAGE_MAX_CHARACTERS]{};
+
+        while ((bytes_received_nickname = recv(client.get_socket_fd(), &client_nickname, sizeof(client_nickname), MSG_NOSIGNAL)) == -1) {
             print_error("Error receiving user nickname");
             send_response_message(client, ctrl_message(CLIENT_ENTER_NICKNAME));
         }
 
+        if (bytes_received_nickname == 0) {
+            close(client.get_socket_fd());
+            remove_client(client);
+            pthread_detach(pthread_self());
+            return nullptr;
+        }
+
+        pthread_mutex_lock(&clients_mutex);
         clean_str(client_nickname);
         client.set_nickname(client_nickname);
+        pthread_mutex_unlock(&clients_mutex);
 
         std::string join_message = ctrl_message(CLIENT_JOIN, client.get_nickname());
-        std::cout << join_message << std::endl;
+        print_message(join_message);
         send_message(client, join_message);
 
         bool client_quit = false;
 
         while (true) {
-            char message_str[MESSAGE_MAX_CHARACTERS];
+            char message_str[MESSAGE_MAX_CHARACTERS]{};
+            ssize_t bytes_received;
 
-            if (recv(client.get_socket_fd(), &message_str, sizeof(message_str), 0) == -1) {
+            if ((bytes_received = recv(client.get_socket_fd(), &message_str, sizeof(message_str), MSG_NOSIGNAL)) == -1) {
                 print_error("Error receiving the message");
                 break;
             }
@@ -117,15 +131,15 @@ namespace circle {
             clean_str(message_str);
             std::string message(message_str);
 
-            if (message == "/quit") {
+            if (bytes_received == 0) {
                 message = ctrl_message(CLIENT_LEAVE, client.get_nickname());
                 client_quit = true;
             } else {
                 message = format_message(client.get_nickname(), message);
             }
 
+            print_message(message);
             send_message(client, message);
-            std::cout << message << std::endl;
 
             if (client_quit) {
                 break;
@@ -140,7 +154,7 @@ namespace circle {
         return nullptr;
     }
 
-    void Server::add_client(Client &client) {
+    void Server::add_client(User &client) {
         pthread_mutex_lock(&Server::clients_mutex);
 
         print_log("Adding client " + addrtos(client.get_address()) + " (" + std::to_string(client.get_socket_fd()) + ") to the list");
@@ -149,26 +163,39 @@ namespace circle {
         pthread_mutex_unlock(&Server::clients_mutex);
     }
 
-    void Server::remove_client(Client &client) {
+    void Server::remove_client(User &client) {
         pthread_mutex_lock(&Server::clients_mutex);
 
         print_log("Removing client " + client.get_nickname() + " from the list");
 
         if (clients.erase(std::find(clients.begin(), clients.end(), client)) != clients.end()) {
-            print_log("Client removed");
+            print_log("User removed");
+        }
+
+        if (clients.empty()) {
+            print_log(ctrl_message(SERVER_EMPTY));
         }
 
         pthread_mutex_unlock(&Server::clients_mutex);
     }
 
-    void Server::send_message(Client &client, std::string &message) {
+    void Server::send_message(User &client, const std::string &message) {
         pthread_mutex_lock(&Server::clients_mutex);
 
         for (auto &c : Server::clients) {
             if (c != client) {
-                if (send(c.get_socket_fd(), message.c_str(), strlen(message.c_str()) * sizeof(char), 0) == -1) {
-                    print_error("Error sending message to" + c.get_nickname());
-                    close(Server::socket_fd);
+                int attempts = 1;
+
+                while (send(c.get_socket_fd(), message.c_str(), strlen(message.c_str()) * sizeof(char), MSG_NOSIGNAL) <= 0 && attempts < MAX_SEND_ATTEMPTS) {
+                    print_error("Error sending message to " + c.get_nickname() + " (attempt " + std::to_string(attempts) + ")");
+                    attempts++;
+                }
+
+                if (attempts == MAX_SEND_ATTEMPTS) {
+                    print_error("Couldn't reach " + c.get_nickname() + " after " + std::to_string(attempts) + " attempts");
+                    send_message(c, ctrl_message(CLIENT_LEAVE, c.get_nickname()));
+                    close(c.get_socket_fd());
+                    remove_client(c);
                     break;
                 }
             }
@@ -177,12 +204,21 @@ namespace circle {
         pthread_mutex_unlock(&Server::clients_mutex);
     }
 
-    void Server::send_response_message(Client &client, const std::string &message) {
+    void Server::send_response_message(User &client, const std::string &message) {
         pthread_mutex_lock(&Server::clients_mutex);
 
-        if (send(client.get_socket_fd(), message.c_str(), strlen(message.c_str()) * sizeof(char), 0) == -1) {
-            print_error("Error sending response message to " + client.get_nickname());
-            close(Server::socket_fd);
+        int attempts = 1;
+
+        while (send(client.get_socket_fd(), message.c_str(), strlen(message.c_str()) * sizeof(char), MSG_NOSIGNAL) <= 0 && attempts < MAX_SEND_ATTEMPTS) {
+            print_error("Error sending message to " + client.get_nickname() + " (attempt " + std::to_string(attempts) + ")");
+            attempts++;
+        }
+
+        if (attempts == MAX_SEND_ATTEMPTS) {
+            print_error("Couldn't reach " + client.get_nickname() + " after " + std::to_string(attempts) + " attempts");
+            send_message(client, ctrl_message(CLIENT_LEAVE, client.get_nickname()));
+            close(client.get_socket_fd());
+            remove_client(client);
         }
 
         pthread_mutex_unlock(&Server::clients_mutex);

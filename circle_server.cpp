@@ -1,15 +1,13 @@
-#include <iostream>
 #include "Server.h"
-#include <csignal>
+#include <iostream>
 #include <cstring>
 
 int main(int argc, char *argv[]) {
-//    signal(SIGPIPE, SIG_IGN);
-//    signal(SIGINT, SIG_IGN);
+    static circle_server::Server server;
 
-    static circle::Server server;
-    if (argc > 1 && strlen(argv[1]) > 0) circle::Server::set_port(argv[1]);
-    circle::Server::listen();
+    if (argc > 1 && strlen(argv[1]) > 0) circle_server::Server::set_port(argv[1]);
+
+    circle_server::Server::listen();
 
     return 0;
 }

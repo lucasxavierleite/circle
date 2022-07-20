@@ -9,28 +9,33 @@
 
 #include <string>
 
-namespace circle {
+#define SERVER_IP_ADDRESS "127.0.0.1"
+#define SERVER_PORT 9999
+#define MESSAGE_MAX_CHARACTERS 4096
+
+namespace circle_client {
+
+    void *handle_recv(void *arg);
 
     class Client {
     private:
+        bool connected;
         int socket_fd;
-        struct sockaddr_in address{};
         std::string nickname;
+        pthread_t recv_thread;
+        pthread_mutex_t mutex{};
 
     public:
-        Client(int &_socket_fd, struct sockaddr_in &_address);
-        struct sockaddr_in get_address();
+        Client();
+        int get_socket_fd() const;
         std::string get_nickname();
-        void set_nickname(std::string _nickname);
-        int get_socket_fd();
-        friend bool operator==(const Client &a, const Client &b);
-        friend bool operator!=(const Client &a, const Client &b);
-        friend bool operator>(const Client &a, const Client &b);
-        friend bool operator>=(const Client &a, const Client &b);
-        friend bool operator<(const Client &a, const Client &b);
-        friend bool operator<=(const Client &a, const Client &b);
+        void set_nickname(std::string &_nickname);
+        void connect();
+        void disconnect();
+        bool is_connected() const;
+        int init();
     };
-}
 
+}
 
 #endif
