@@ -96,7 +96,7 @@ namespace circle_server {
         ssize_t bytes_received_nickname;
         char client_nickname[MESSAGE_MAX_CHARACTERS]{};
 
-        while ((bytes_received_nickname = recv(client.get_socket_fd(), &client_nickname, sizeof(client_nickname), MSG_NOSIGNAL)) == -1) {
+        while ((bytes_received_nickname = recv(client.get_socket_fd(), &client_nickname, MESSAGE_MAX_CHARACTERS, MSG_NOSIGNAL)) == -1) {
             print_error("Error receiving user nickname");
             send_response_message(client, ctrl_message(CLIENT_ENTER_NICKNAME));
         }
@@ -123,7 +123,7 @@ namespace circle_server {
             char message_str[MESSAGE_MAX_CHARACTERS]{};
             ssize_t bytes_received;
 
-            if ((bytes_received = recv(client.get_socket_fd(), &message_str, sizeof(message_str), MSG_NOSIGNAL)) == -1) {
+            if ((bytes_received = recv(client.get_socket_fd(), &message_str, MESSAGE_MAX_CHARACTERS - client.get_nickname().length() - 2, MSG_NOSIGNAL)) == -1) {
                 print_error("Error receiving the message");
                 break;
             }
@@ -186,13 +186,13 @@ namespace circle_server {
             if (c != client) {
                 int attempts = 1;
 
-                while (send(c.get_socket_fd(), message.c_str(), strlen(message.c_str()) * sizeof(char), MSG_NOSIGNAL) <= 0 && attempts < MAX_SEND_ATTEMPTS) {
+                while (send(c.get_socket_fd(), message.c_str(), strlen(message.c_str()) * sizeof(char), MSG_NOSIGNAL) <= 0 && attempts <= MAX_SEND_ATTEMPTS) {
                     print_error("Error sending message to " + c.get_nickname() + " (attempt " + std::to_string(attempts) + ")");
                     attempts++;
                 }
 
                 if (attempts == MAX_SEND_ATTEMPTS) {
-                    print_error("Couldn't reach " + c.get_nickname() + " after " + std::to_string(attempts) + " attempts");
+                    print_error("Couldn't reach " + c.get_nickname() + " after " + std::to_string(attempts - 1) + " attempts");
                     send_message(c, ctrl_message(CLIENT_LEAVE, c.get_nickname()));
                     close(c.get_socket_fd());
                     remove_client(c);

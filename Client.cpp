@@ -90,7 +90,7 @@ namespace circle_client {
             char message_str[MESSAGE_MAX_CHARACTERS]{};
             ssize_t bytes_received;
 
-            if ((bytes_received = recv(client.get_socket_fd(), &message_str, sizeof(message_str), MSG_NOSIGNAL)) == -1) {
+            if ((bytes_received = recv(client.get_socket_fd(), &message_str, MESSAGE_MAX_CHARACTERS, MSG_NOSIGNAL)) == -1) {
                 if (client.is_connected()) {
                     print_error("Error receiving message");
                     break;

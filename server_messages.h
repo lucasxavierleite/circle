@@ -5,12 +5,6 @@
 
 #include <string>
 
-#define DEFAULT_IP_ADDRESS "127.0.0.1"
-#define DEFAULT_PORT 9999
-
-#define NICKNAME_MAX_CHARACTERS 50
-#define MESSAGE_MAX_CHARACTERS 4096
-
 namespace circle_server {
 
     enum CTRL_MESSAGE {
