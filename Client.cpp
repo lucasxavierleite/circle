@@ -73,8 +73,7 @@ namespace circle_client {
                 }
 
                 if (bytes_sent == 0 || !connected) {
-                    throw std::runtime_error("Error sending message");
-//                    break;
+                    return -1;
                 }
             }
 

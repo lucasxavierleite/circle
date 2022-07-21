@@ -92,21 +92,6 @@ namespace circle_server {
     void *Server::handle_client(void *arg) {
         User client = *((User *) arg);
 
-//        ssize_t bytes_received_nickname;
-//        char client_nickname[MESSAGE_MAX_CHARACTERS]{};
-//
-//        while ((bytes_received_nickname = recv(client.get_socket_fd(), &client_nickname, MESSAGE_MAX_CHARACTERS, MSG_NOSIGNAL)) == -1) {
-//            print_error("Error receiving user nickname");
-//            send_response_message(client, ctrl_message(CLIENT_ENTER_NICKNAME));
-//        }
-
-//        if (bytes_received_nickname == 0) {
-//            close(client.get_socket_fd());
-//            remove_client(client);
-//            pthread_detach(pthread_self());
-//            return nullptr;
-//        }
-
         std::string client_nickname = get_random_nickname();
         client.set_nickname(client_nickname);
 
@@ -139,7 +124,7 @@ namespace circle_server {
                 std::string argument = split.size() == 2 ? split[1] : "";
 
                 if (command == "/nickname") {
-                    if (argument != "" && validate_nickname(argument)) {
+                    if (!argument.empty() && validate_nickname(argument)) {
                         std::string old_nickname = client.get_nickname();
                         client.set_nickname(argument);
                         message = ctrl_message(CLIENT_CHANGE_NICKNAME, { old_nickname, client.get_nickname() });
@@ -148,6 +133,10 @@ namespace circle_server {
                         send_response_message(client, message);
                         continue;
                     }
+                } else if(command == "/ping") {
+                    message = ctrl_message(CLIENT_PING);
+                    send_response_message(client, message);
+                    continue;
                 } else {
                     message = format_message(client.get_nickname(), message);
                 }
@@ -211,7 +200,6 @@ namespace circle_server {
                     send_message(c, ctrl_message(CLIENT_LEAVE, c.get_nickname()));
                     close(c.get_socket_fd());
                     remove_client(c);
-                    break;
                 }
             }
         }
@@ -230,7 +218,7 @@ namespace circle_server {
         }
 
         if (attempts == MAX_SEND_ATTEMPTS) {
-            print_error("Couldn't reach " + client.get_nickname() + " after " + std::to_string(attempts) + " attempts");
+            print_error("Couldn't reach " + client.get_nickname() + " after " + std::to_string(attempts - 1) + " attempts");
             send_message(client, ctrl_message(CLIENT_LEAVE, client.get_nickname()));
             close(client.get_socket_fd());
             remove_client(client);

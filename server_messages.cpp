@@ -20,14 +20,10 @@ namespace circle_server {
 
         switch (_ctrl_message) {
             case SERVER_EMPTY:
-                message = "The room is empty :(\n";
-                message += "Waiting for new clients";
+                message = "the room is empty :(. Waiting for new clients";
                 break;
             case CLIENT_WELCOME:
-                message = "Welcome, " + arg[0];
-                break;
-            case CLIENT_ENTER_NICKNAME:
-                message = "Please, enter your nickname: ";
+                message = "welcome, " + arg[0];
                 break;
             case CLIENT_JOIN:
                 message = arg[0] + " joined the chat";
@@ -39,11 +35,14 @@ namespace circle_server {
                 message = arg[0] + " changed their nickname to " + arg[1];
                 break;
             case CLIENT_INVALID_NICKNAME:
-                message = "Invalid nickname. Please make sure your nickname contains only up to 50 ASCII characters (special characters are not allowed)";
+                message = "invalid nickname. Please make sure your nickname contains only up to 50 ASCII characters (special characters are not allowed)";
+                break;
+            case CLIENT_PING:
+                message = "pong";
                 break;
         }
 
-        return message;
+        return "Server: " + message;
     }
 
     std::string ctrl_message(enum CTRL_MESSAGE _ctrl_message, const std::string &arg) {

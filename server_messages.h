@@ -11,11 +11,11 @@ namespace circle_server {
     enum CTRL_MESSAGE {
         SERVER_EMPTY,
         CLIENT_WELCOME,
-        CLIENT_ENTER_NICKNAME,
         CLIENT_JOIN,
         CLIENT_LEAVE,
         CLIENT_CHANGE_NICKNAME,
-        CLIENT_INVALID_NICKNAME
+        CLIENT_INVALID_NICKNAME,
+        CLIENT_PING
     };
 
     std::string ctrl_message(enum CTRL_MESSAGE _ctrl_message, const std::string &arg = "");
