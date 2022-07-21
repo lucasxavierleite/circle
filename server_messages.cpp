@@ -6,6 +6,8 @@
 #include <cerrno>
 #include <cstring>
 #include <string>
+#include <sstream>
+#include <vector>
 
 namespace circle_server {
 
@@ -13,26 +15,55 @@ namespace circle_server {
         std::cout << "[ERROR " << errno << "] " << str << ": " << std::strerror(errno) << std::endl;
     }
 
-    std::string ctrl_message(enum CTRL_MESSAGE ctrl_message, const std::string &arg) {
+    std::string ctrl_message(enum CTRL_MESSAGE _ctrl_message, std::vector<std::string> arg) {
         std::string message;
 
-        switch (ctrl_message) {
+        switch (_ctrl_message) {
             case SERVER_EMPTY:
                 message = "The room is empty :(\n";
                 message += "Waiting for new clients";
+                break;
+            case CLIENT_WELCOME:
+                message = "Welcome, " + arg[0];
                 break;
             case CLIENT_ENTER_NICKNAME:
                 message = "Please, enter your nickname: ";
                 break;
             case CLIENT_JOIN:
-                message = arg + " joined the chat";
+                message = arg[0] + " joined the chat";
                 break;
             case CLIENT_LEAVE:
-                message = arg + " left the chat";
+                message = arg[0] + " left the chat";
+                break;
+            case CLIENT_CHANGE_NICKNAME:
+                message = arg[0] + " changed their nickname to " + arg[1];
+                break;
+            case CLIENT_INVALID_NICKNAME:
+                message = "Invalid nickname. Please make sure your nickname contains only up to 50 ASCII characters (special characters are not allowed)";
                 break;
         }
 
         return message;
+    }
+
+    std::string ctrl_message(enum CTRL_MESSAGE _ctrl_message, const std::string &arg) {
+        std::vector<std::string> argv(1);
+        argv[0] = arg;
+
+        return ctrl_message(_ctrl_message, argv);
+    }
+
+    std::vector<std::string> split_message(const std::string &message) {
+        std::stringstream ss(message);
+
+        std::string token;
+        std::vector<std::string> split;
+
+        while (std::getline(ss, token, ' ')) {
+            split.push_back(token);
+        }
+
+        return split;
     }
 
     std::string format_message(const std::string &nickname, const std::string &message) {

@@ -1,5 +1,6 @@
 #include "Server.h"
 #include "server_messages.h"
+#include "nicknames.h"
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -91,27 +92,25 @@ namespace circle_server {
     void *Server::handle_client(void *arg) {
         User client = *((User *) arg);
 
-        send_response_message(client, ctrl_message(CLIENT_ENTER_NICKNAME));
+//        ssize_t bytes_received_nickname;
+//        char client_nickname[MESSAGE_MAX_CHARACTERS]{};
+//
+//        while ((bytes_received_nickname = recv(client.get_socket_fd(), &client_nickname, MESSAGE_MAX_CHARACTERS, MSG_NOSIGNAL)) == -1) {
+//            print_error("Error receiving user nickname");
+//            send_response_message(client, ctrl_message(CLIENT_ENTER_NICKNAME));
+//        }
 
-        ssize_t bytes_received_nickname;
-        char client_nickname[MESSAGE_MAX_CHARACTERS]{};
+//        if (bytes_received_nickname == 0) {
+//            close(client.get_socket_fd());
+//            remove_client(client);
+//            pthread_detach(pthread_self());
+//            return nullptr;
+//        }
 
-        while ((bytes_received_nickname = recv(client.get_socket_fd(), &client_nickname, MESSAGE_MAX_CHARACTERS, MSG_NOSIGNAL)) == -1) {
-            print_error("Error receiving user nickname");
-            send_response_message(client, ctrl_message(CLIENT_ENTER_NICKNAME));
-        }
-
-        if (bytes_received_nickname == 0) {
-            close(client.get_socket_fd());
-            remove_client(client);
-            pthread_detach(pthread_self());
-            return nullptr;
-        }
-
-        pthread_mutex_lock(&clients_mutex);
-        clean_str(client_nickname);
+        std::string client_nickname = get_random_nickname();
         client.set_nickname(client_nickname);
-        pthread_mutex_unlock(&clients_mutex);
+
+        send_response_message(client, ctrl_message(CLIENT_WELCOME, client.get_nickname()));
 
         std::string join_message = ctrl_message(CLIENT_JOIN, client.get_nickname());
         print_message(join_message);
@@ -135,7 +134,23 @@ namespace circle_server {
                 message = ctrl_message(CLIENT_LEAVE, client.get_nickname());
                 client_quit = true;
             } else {
-                message = format_message(client.get_nickname(), message);
+                std::vector<std::string> split = split_message(message);
+                std::string command = split[0];
+                std::string argument = split.size() == 2 ? split[1] : "";
+
+                if (command == "/nickname") {
+                    if (argument != "" && validate_nickname(argument)) {
+                        std::string old_nickname = client.get_nickname();
+                        client.set_nickname(argument);
+                        message = ctrl_message(CLIENT_CHANGE_NICKNAME, { old_nickname, client.get_nickname() });
+                    } else {
+                        message = ctrl_message(CLIENT_INVALID_NICKNAME);
+                        send_response_message(client, message);
+                        continue;
+                    }
+                } else {
+                    message = format_message(client.get_nickname(), message);
+                }
             }
 
             print_message(message);

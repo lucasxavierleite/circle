@@ -16,6 +16,8 @@ namespace circle_server {
         int socket_fd;
         struct sockaddr_in address{};
         std::string nickname;
+        bool admin;
+        bool mute;
 
     public:
         User(int &_socket_fd, struct sockaddr_in &_address);

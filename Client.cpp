@@ -18,7 +18,6 @@ namespace circle_client {
         nickname = {};
         recv_thread = {};
         mutex = PTHREAD_MUTEX_INITIALIZER;
-        socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     }
 
     int Client::get_socket_fd() const {
@@ -43,6 +42,8 @@ namespace circle_client {
         server_address.sin_port = htons(server_port);
         server_address.sin_addr.s_addr = inet_addr(server_ip.c_str());
 
+        socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+
         if (::connect(socket_fd, (struct sockaddr *) &server_address, sizeof(server_address)) == -1) {
             throw std::runtime_error("Error connecting to server " + server_ip + ":" + std::to_string(server_port));
         }
@@ -57,10 +58,9 @@ namespace circle_client {
 
         std::locale::global(std::locale(""));
 
-        while (!std::cin.eof()) {
-            std::string message{};
-            std::getline(std::cin, message);
+        std::string message;
 
+        while (std::getline(std::cin, message)) {
             if (message.length() > 0) {
                 if (message == "/quit") {
                     break;
@@ -69,14 +69,16 @@ namespace circle_client {
                 ssize_t bytes_sent;
 
                 if ((bytes_sent = send(socket_fd, message.c_str(), strlen(message.c_str()) * sizeof(char), MSG_NOSIGNAL)) == -1) {
-                    print_error("Error sending message");
-                    break;
+                    throw std::runtime_error("Error sending message");
                 }
 
                 if (bytes_sent == 0 || !connected) {
-                    break;
+                    throw std::runtime_error("Error sending message");
+//                    break;
                 }
             }
+
+            message = {};
         }
 
         disconnect();
