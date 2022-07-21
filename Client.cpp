@@ -57,7 +57,7 @@ namespace circle_client {
 
         std::locale::global(std::locale(""));
 
-        while (true) {
+        while (!std::cin.eof()) {
             std::string message{};
             std::getline(std::cin, message);
 

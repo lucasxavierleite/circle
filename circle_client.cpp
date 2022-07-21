@@ -2,8 +2,19 @@
 #include "client_messages.h"
 
 #include <iostream>
+#include <csignal>
+
+void handler(int signal) {
+    std::cout << std::endl;
+    circle_client::print_instruction(circle_client::QUIT);
+    std::cin.clear();
+    std::cout << "> ";
+    std::cout.flush();
+}
 
 int main(int argc, char *argv[]) {
+    signal(SIGINT, handler);
+
     circle_client::print_welcome_message();
 
     circle_client::Client client;
@@ -15,6 +26,7 @@ int main(int argc, char *argv[]) {
         std::cout.flush();
 
         std::cin >> command;
+
         if (command == "/connect") {
             try {
                 client.connect();
@@ -25,7 +37,8 @@ int main(int argc, char *argv[]) {
             }
         } else if (command == "/help") {
             circle_client::print_help();
-        } else if (command == "/quit") {
+        } else if (command == "/quit" || std::cin.eof()) {
+            std::cout << std::endl;
             return 0;
         } else {
             print_instruction(circle_client::INVALID_COMMAND);

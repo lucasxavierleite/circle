@@ -24,10 +24,10 @@ namespace circle_client {
 
         switch (instruction) {
             case INVALID_COMMAND:
-                output = "Invalid command. Type /help to see the available commands";
+                output = "Invalid command. Type \"/help\" to see the available commands";
                 break;
             case QUIT:
-                output = "Type /quit to close the chat";
+                output = "Type \"/quit\" to close the chat";
                 break;
             default:
                 output = instruction_message;
@@ -38,7 +38,7 @@ namespace circle_client {
     }
 
     void print_welcome_message() {
-        std::cout << "Welcome to Circle IRC" << std::endl << std::endl;
+        std::cout << "Welcome to Circle IRC" << std::endl;
         print_help();
     }
 
@@ -49,7 +49,7 @@ namespace circle_client {
 
         struct winsize w{};
         ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-        std::ostringstream help_message("Available commands:\n", std::ios::ate);
+        std::ostringstream help_message("\nAvailable commands:\n", std::ios::ate);
         help_message << std::setfill('-') << std::setw(w.ws_col > 0 ? w.ws_col : 80) << " " << std::setfill(' ')
                      << std::endl;
 
