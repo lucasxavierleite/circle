@@ -31,6 +31,9 @@
 *.out
 *.app
 
+# Build files
+build/
+
 # Config files for IDE and text editors
 .vs/
 .vscode/
