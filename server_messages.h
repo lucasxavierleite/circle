@@ -24,7 +24,8 @@ namespace circle_server {
         MUTE,
         KICK,
         SELF_KICK,
-        USER_NOT_FOUND
+        USER_NOT_FOUND,
+        WHO_IS
     };
 
     std::string ctrl_message(enum CTRL_MESSAGE _ctrl_message, const std::string &arg = "");

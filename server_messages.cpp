@@ -68,6 +68,8 @@ namespace circle_server {
             case USER_NOT_FOUND:
                 message = "User " + arg[0] + " not found";
                 break;
+            case WHO_IS:
+                message = arg[0] + " is " + arg[1];
         }
 
         return ">>> " + message;
@@ -127,7 +129,7 @@ namespace circle_server {
 
         char ipaddr[16];
         sprintf(ipaddr, "%u.%u.%u.%u", oct_1, oct_2, oct_3, oct_4);
-        return ipaddr;
+        return std::string(ipaddr);
     }
 
 }

@@ -106,8 +106,12 @@ namespace circle_server {
 
             client = update_client(client);
 
-            clean_str(message_str);
-            std::string message(message_str);
+            std::string message;
+
+            if (strlen(message_str) > 0) {
+                clean_str(message_str);
+                message = message_str;
+            }
 
             if (bytes_received == 0 || client.is_kicked()) {
                 if (!client.get_channel().empty()) {
@@ -149,7 +153,7 @@ namespace circle_server {
                     } else if (validate_channel(argument)) {
                         if (!client.get_channel().empty()) {
                             remove_client(client);
-                            message = ctrl_message(LEAVE, { client.get_nickname(), client.get_channel() });
+                            message = ctrl_message(LEAVE, {client.get_nickname(), client.get_channel()});
                             send_message(client, message);
                         }
 
@@ -168,7 +172,25 @@ namespace circle_server {
                         send_response_message(client, message);
                         continue;
                     }
-                } else if (command == "/kick") {
+                } else if (command == "/whois" && !client.get_channel().empty()) {
+                    if (client.is_admin()) {
+                        std::string whois;
+
+                        if (argument.empty()) {
+                            message = ctrl_message(PROVIDE_ARGUMENT);
+                            send_response_message(client, message);
+                        } else if (!get_client_address(client, argument, whois)) {
+                            message = ctrl_message(USER_NOT_FOUND, argument);
+                            send_response_message(client, message);
+                        } else {
+                            message = ctrl_message(WHO_IS, { argument, whois });
+                            send_response_message(client, message);
+                        }
+                    } else {
+                        message = ctrl_message(NOT_ADMIN);
+                        send_response_message(client, message);
+                    }
+                } else if (command == "/kick" && !client.get_channel().empty()) {
                     if (client.is_admin()) {
                         if (argument.empty()) {
                             message = ctrl_message(PROVIDE_ARGUMENT);
@@ -353,6 +375,31 @@ namespace circle_server {
         return true;
     }
 
+    bool Server::get_client_address(User &admin, const std::string &nickname, std::string &address) {
+        if (admin.get_channel().empty()) {
+            return false;
+        }
+
+        auto channel = Server::channels.find(admin.get_channel());
+
+        if (channel == Server::channels.end()) {
+            return false;
+        }
+
+        std::vector<User> channel_users = channel->second;
+        auto user = std::find_if(channel_users.begin(), channel_users.end(), [&](User &u) {
+            return u.get_nickname() == nickname;
+        });
+
+        if (user == channel_users.end()) {
+            return false;
+        }
+
+        address = addrtos((*user).get_address());
+
+        return true;
+    }
+
     void Server::send_message(User &client, const std::string &message) {
         if (client.get_channel().empty()) {
             return;
@@ -378,7 +425,7 @@ namespace circle_server {
 
             if (attempts >= MAX_SEND_ATTEMPTS) {
                 print_error("Couldn't reach " + c.get_nickname() + " after " + std::to_string(attempts - 1) + " attempts");
-//                send_message(c, ctrl_message(LEAVE, c.get_nickname()));
+                send_message(c, ctrl_message(LEAVE, c.get_nickname()));
                 close(c.get_socket_fd());
                 remove_client(c);
                 break;
@@ -400,7 +447,7 @@ namespace circle_server {
 
         if (attempts >= MAX_SEND_ATTEMPTS) {
             print_error("Couldn't reach " + client.get_nickname() + " after " + std::to_string(attempts - 1) + " attempts");
-//            send_message(client, ctrl_message(LEAVE, client.get_nickname()));
+            send_message(client, ctrl_message(LEAVE, client.get_nickname()));
             close(client.get_socket_fd());
             remove_client(client);
         }
