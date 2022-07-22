@@ -1,18 +1,18 @@
 # circle
-IRC chat application for a Computer Networks assignment at ICMC - USP </br>
+IRC application for a Computer Networks assignment at ICMC - USP </br>
 
 Altair Fernando Pereira Junior, 9391831 <br/>
 Osni Brito de Jesus, 11857330 <br/>
 Lucas Xavier Leite, 10783347 <br/>
 
 ### Projeto
-Neste projeto para a disciplina de redes de computadores o grupo implementou um **Internet Relay Chat (IRC)** com algumas adaptações do protocolo **IRC 1459**. Onde é possivel conectar diversos usuarios (clientes) a um servidor e estabelecer uma troca de mensagens entre si. Algumas funcionalidades serão disponiveis atraves de comandos.
+Neste projeto para a disciplina de redes de computadores o grupo implementou um **Internet Relay Chat (IRC)** com algumas adaptações do protocolo **RFC 1459**. Onde é possivel conectar diversos usuarios (clientes) a um servidor e estabelecer uma troca de mensagens entre si. Algumas funcionalidades serão disponiveis atraves de comandos.
 
 
 
 ## Build
 
-Primeiramente é necessario criar a pasta build, onde ficará os arquivos executaveis. Isso para o servidor e cliente.
+Primeiramente é necessario criar a pasta build, onde ficará os arquivos executáveis. Isso para o servidor e cliente.
 
 ```
 mkdir build
@@ -39,7 +39,7 @@ make run_client
 ```
 
 **Sistemas operacionais testados:** <br/>
-Arch Linux 5.18.1-arch1-1 x86_64 GNU/Linux <br/>
+Arch Linux 5.18.9-arch1-1 x86_64 GNU/Linux <br/>
 5.17.15-1-MANJARO x86_64 GNU/Linux <br/>
 **Compilador:** gcc version 12.1.0 <br/>
 
