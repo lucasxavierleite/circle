@@ -11,6 +11,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #define DEFAULT_IP_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 9999
@@ -30,7 +31,7 @@ namespace circle_server {
         static const char *ip_address;
         static int port;
         static pthread_mutex_t clients_mutex;
-        static std::vector<User> clients;
+        static std::map<std::string, std::vector<User>> channels;
         static void *handle_client(void *arg);
         static bool log;
 

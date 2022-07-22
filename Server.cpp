@@ -23,7 +23,7 @@ namespace circle_server {
     const char *Server::ip_address;
     int Server::port;
     pthread_mutex_t Server::clients_mutex;
-    std::vector<User> Server::clients;
+    std::map<std::string, std::vector<User>> Server::channels;
     bool Server::log;
 
     Server::Server() {
@@ -62,9 +62,8 @@ namespace circle_server {
             return;
         }
 
-        std::cout << "Server " << Server::ip_address << " listening on port " << Server::port << std::endl;
-
-        print_log(ctrl_message(SERVER_EMPTY));
+        print_log("Server " + std::string(Server::ip_address) + " listening on port " + std::to_string(Server::port));
+        print_log("Waiting for new clients");
 
         if (::listen(Server::socket_fd, MAX_CLIENTS_CONNECTED) == -1) {
             print_error("Error listening to clients");
@@ -83,7 +82,6 @@ namespace circle_server {
             }
 
             User client = User(client_socket_fd, client_address);
-            add_client(client);
             pthread_create(&tid, nullptr, &handle_client, static_cast<void *>(&client));
             sleep(1);
         }
@@ -95,13 +93,7 @@ namespace circle_server {
         std::string client_nickname = get_random_nickname();
         client.set_nickname(client_nickname);
 
-        send_response_message(client, ctrl_message(CLIENT_WELCOME, client.get_nickname()));
-
-        std::string join_message = ctrl_message(CLIENT_JOIN, client.get_nickname());
-        print_message(join_message);
-        send_message(client, join_message);
-
-        bool client_quit = false;
+        send_response_message(client, ctrl_message(WELCOME, client.get_nickname()));
 
         while (true) {
             char message_str[MESSAGE_MAX_CHARACTERS]{};
@@ -116,42 +108,70 @@ namespace circle_server {
             std::string message(message_str);
 
             if (bytes_received == 0) {
-                message = ctrl_message(CLIENT_LEAVE, client.get_nickname());
-                client_quit = true;
+                print_message(message, client.get_channel());
+
+                if (!client.get_channel().empty()) {
+                    message = ctrl_message(LEAVE, { client.get_nickname(), client.get_channel() });
+                    send_message(client, message);
+                }
+
+                break;
             } else {
+                if (message.empty()) {
+                    continue;
+                }
+
                 std::vector<std::string> split = split_message(message);
                 std::string command = split[0];
                 std::string argument = split.size() == 2 ? split[1] : "";
 
                 if (command == "/nickname") {
-                    if (!argument.empty() && validate_nickname(argument)) {
+                    if (validate_nickname(argument)) {
                         std::string old_nickname = client.get_nickname();
                         client.set_nickname(argument);
-                        message = ctrl_message(CLIENT_CHANGE_NICKNAME, { old_nickname, client.get_nickname() });
+                        message = ctrl_message(CHANGE_NICKNAME, { old_nickname, client.get_nickname() });
+                        send_message(client, message);
                     } else {
-                        message = ctrl_message(CLIENT_INVALID_NICKNAME);
+                        message = ctrl_message(INVALID_NICKNAME);
                         send_response_message(client, message);
                         continue;
                     }
                 } else if(command == "/ping") {
-                    message = ctrl_message(CLIENT_PING);
+                    message = ctrl_message(PING);
                     send_response_message(client, message);
                     continue;
-                } else {
+                } else if (command == "/join") {
+                    if (validate_channel(argument)) {
+                        message = ctrl_message(JOIN, { client.get_nickname(), argument });
+
+                        if (!client.get_channel().empty()) {
+                            remove_client(client);
+                        }
+
+                        client.set_channel(argument);
+                        add_client(client);
+                        send_message(client, message);
+                    } else {
+                        message = ctrl_message(INVALID_CHANNEL_NAME);
+                        send_response_message(client, message);
+                        continue;
+                    }
+                } else if (!client.get_channel().empty()) {
                     message = format_message(client.get_nickname(), message);
+                    print_message(message, client.get_channel());
+                    send_message(client, message);
+                } else {
+                    message = ctrl_message(NO_CHANNEL);
+                    send_response_message(client, message);
                 }
-            }
-
-            print_message(message);
-            send_message(client, message);
-
-            if (client_quit) {
-                break;
             }
         }
 
         close(client.get_socket_fd());
-        remove_client(client);
+
+        if (!client.get_channel().empty()) {
+            remove_client(client);
+        }
 
         pthread_detach(pthread_self());
 
@@ -159,48 +179,82 @@ namespace circle_server {
     }
 
     void Server::add_client(User &client) {
+        auto channel = Server::channels.find(client.get_channel());
+
         pthread_mutex_lock(&Server::clients_mutex);
 
-        print_log("Adding client " + addrtos(client.get_address()) + " (" + std::to_string(client.get_socket_fd()) + ") to the list");
-        Server::clients.push_back(client);
+        print_log("Adding client " + addrtos(client.get_address()) + " (" + std::to_string(client.get_socket_fd()) + ") to channel " + client.get_channel());
+
+        if (channel == Server::channels.end()) {
+            print_log("Channel doesn't exist. Creating one");
+            client.set_admin(true);
+            std::vector<User> users{};
+            users.push_back(client);
+            Server::channels.insert(std::pair<std::string, std::vector<User>>(client.get_channel(), users));
+        } else {
+            print_log("Channel already exists. Adding user to the list");
+            client.set_admin(false);
+            channel->second.push_back(client);
+        }
 
         pthread_mutex_unlock(&Server::clients_mutex);
     }
 
     void Server::remove_client(User &client) {
-        pthread_mutex_lock(&Server::clients_mutex);
-
-        print_log("Removing client " + client.get_nickname() + " from the list");
-
-        if (clients.erase(std::find(clients.begin(), clients.end(), client)) != clients.end()) {
-            print_log("User removed");
+        if (client.get_channel().empty()) {
+            return;
         }
 
-        if (clients.empty()) {
-            print_log(ctrl_message(SERVER_EMPTY));
+        print_log("Removing client " + client.get_nickname() + " from channel " + client.get_channel());
+
+        auto channel = Server::channels.find(client.get_channel());
+
+        if (channel == Server::channels.end()) {
+            return;
+        }
+
+        std::vector<User> channel_users = channel->second;
+
+        pthread_mutex_lock(&Server::clients_mutex);
+
+        if (channel_users.erase(std::find(channel_users.begin(), channel_users.end(), client)) != channel_users.end()) {
+            channel->second = channel_users;
+            client.set_admin(false);
+            print_log("User removed");
         }
 
         pthread_mutex_unlock(&Server::clients_mutex);
     }
 
     void Server::send_message(User &client, const std::string &message) {
+        if (client.get_channel().empty()) {
+            return;
+        }
+
+        auto channel = Server::channels.find(client.get_channel());
+
+        if (channel == Server::channels.end()) {
+            return;
+        }
+
+        std::vector<User> clients = channel->second;
+
         pthread_mutex_lock(&Server::clients_mutex);
 
-        for (auto &c : Server::clients) {
-            if (c != client) {
-                int attempts = 1;
+        for (auto &c : clients) {
+            int attempts = 1;
 
-                while (send(c.get_socket_fd(), message.c_str(), strlen(message.c_str()) * sizeof(char), MSG_NOSIGNAL) <= 0 && attempts <= MAX_SEND_ATTEMPTS) {
-                    print_error("Error sending message to " + c.get_nickname() + " (attempt " + std::to_string(attempts) + ")");
-                    attempts++;
-                }
+            while (send(c.get_socket_fd(), message.c_str(), strlen(message.c_str()) * sizeof(char), MSG_NOSIGNAL) <= 0 && attempts <= MAX_SEND_ATTEMPTS) {
+                print_error("Error sending message to " + c.get_nickname() + " (attempt " + std::to_string(attempts) + ")");
+                attempts++;
+            }
 
-                if (attempts == MAX_SEND_ATTEMPTS) {
-                    print_error("Couldn't reach " + c.get_nickname() + " after " + std::to_string(attempts - 1) + " attempts");
-                    send_message(c, ctrl_message(CLIENT_LEAVE, c.get_nickname()));
-                    close(c.get_socket_fd());
-                    remove_client(c);
-                }
+            if (attempts >= MAX_SEND_ATTEMPTS) {
+                print_error("Couldn't reach " + c.get_nickname() + " after " + std::to_string(attempts - 1) + " attempts");
+                send_message(c, ctrl_message(LEAVE, c.get_nickname()));
+                close(c.get_socket_fd());
+                remove_client(c);
+                break;
             }
         }
 
@@ -217,9 +271,9 @@ namespace circle_server {
             attempts++;
         }
 
-        if (attempts == MAX_SEND_ATTEMPTS) {
+        if (attempts >= MAX_SEND_ATTEMPTS) {
             print_error("Couldn't reach " + client.get_nickname() + " after " + std::to_string(attempts - 1) + " attempts");
-            send_message(client, ctrl_message(CLIENT_LEAVE, client.get_nickname()));
+            send_message(client, ctrl_message(LEAVE, client.get_nickname()));
             close(client.get_socket_fd());
             remove_client(client);
         }

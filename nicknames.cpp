@@ -1,5 +1,6 @@
 #include "nicknames.h"
 #include <cstdlib>
+#include <algorithm>
 
 namespace circle_server {
 
@@ -19,11 +20,11 @@ namespace circle_server {
     }
 
     bool validate_nickname(const std::string &_nickname) {
-        if (_nickname.length() > NICKNAME_MAX_CHARACTERS) return false;
-        for (auto c : _nickname)
-            if (!isascii(c)) return false;
+        if (_nickname.length() > NICKNAME_MAX_CHARACTERS || _nickname.empty()) return false;
 
-        return true;
+        return std::all_of(_nickname.begin(), _nickname.end(), [](const char &c) {
+            return isascii(c);
+        });
     }
 
     void build_nicknames() {
