@@ -10,6 +10,7 @@ namespace circle_server {
 
     enum CTRL_MESSAGE {
         WELCOME,
+        PROVIDE_ARGUMENT,
         JOIN,
         LEAVE,
         CHANGE_NICKNAME,
@@ -22,6 +23,7 @@ namespace circle_server {
         NOT_ADMIN,
         MUTE,
         KICK,
+        SELF_KICK,
         USER_NOT_FOUND
     };
 

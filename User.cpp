@@ -16,6 +16,7 @@ namespace circle_server {
         channel = {};
         admin = false;
         mute = false;
+        kicked = false;
     }
 
     bool operator==(const User &a, const User &b) { return a.socket_fd == b.socket_fd; }
@@ -63,5 +64,13 @@ namespace circle_server {
 
     bool User::is_mute() const {
         return mute;
+    }
+
+    bool User::is_kicked() const {
+        return kicked;
+    }
+
+    void User::set_kicked(const bool &_kicked) {
+        kicked = _kicked;
     }
 }

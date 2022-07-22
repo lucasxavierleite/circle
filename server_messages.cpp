@@ -23,6 +23,9 @@ namespace circle_server {
             case WELCOME:
                 message = "Welcome, " + arg[0];
                 break;
+            case PROVIDE_ARGUMENT:
+                message = "Please provide an argument";
+                break;
             case JOIN:
                 message = arg[0] + " joined the channel " + arg[1];
                 break;
@@ -33,13 +36,13 @@ namespace circle_server {
                 message = arg[0] + " changed their nickname to " + arg[1];
                 break;
             case INVALID_NICKNAME:
-                message = "Invalid nickname. Please, make sure your nickname contains only up to 50 ASCII characters (special characters are not allowed)";
+                message = "Invalid nickname. Please make sure your nickname contains only up to 50 ASCII characters (special characters are not allowed)";
                 break;
             case PING:
                 message = "Pong";
                 break;
             case INVALID_CHANNEL_NAME:
-                message = "Invalid channel. Please, make sure the channel name starts with '#' or '&' and doesn't contain commas (',') or blank spaces";
+                message = "Invalid channel. Please make sure the channel name starts with '#' or '&' and doesn't contain commas (',') or blank spaces";
                 break;
             case NO_CHANNEL:
                 message = R"(You need to use "/join" to join a channel in order to send messages and perform other actions. See available commands with "/help")";
@@ -58,6 +61,9 @@ namespace circle_server {
                 break;
             case KICK:
                 message = arg[0] + " was kicked out by the channel administrator " + arg[1];
+                break;
+            case SELF_KICK:
+                message = R"(Sorry, you can't kick yourself out. Use "/quit" for that)";
                 break;
             case USER_NOT_FOUND:
                 message = "User " + arg[0] + " not found";

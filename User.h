@@ -19,6 +19,7 @@ namespace circle_server {
         std::string channel;
         bool admin;
         bool mute;
+        bool kicked;
 
     public:
         User(int &_socket_fd, struct sockaddr_in &_address);
@@ -31,6 +32,8 @@ namespace circle_server {
         void set_admin(const bool &_admin);
         bool is_mute() const;
         void set_mute(const bool &_mute);
+        bool is_kicked() const;
+        void set_kicked(const bool &_kicked);
         int get_socket_fd();
         friend bool operator==(const User &a, const User &b);
         friend bool operator!=(const User &a, const User &b);

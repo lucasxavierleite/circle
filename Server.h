@@ -42,6 +42,7 @@ namespace circle_server {
         static User update_client(User &client);
         static void add_client(User &client);
         static void remove_client(User &client);
+        static bool kick_client(User &admin, const std::string &nickname);
         static bool set_mute_client(User &admin, const std::string &nickname, const bool &mute);
         static void send_message(User &client, const std::string &message);
         static void send_response_message(User &client, const std::string &message);
