@@ -12,7 +12,7 @@ Neste projeto para a disciplina de redes de computadores o grupo implementou um 
 
 
 
-## Build
+### Build
 
 Primeiramente é necessario criar a pasta build, onde ficará os arquivos executáveis. Isso para o servidor e cliente.
 
@@ -41,8 +41,10 @@ make run_client
 ```
 
 **Sistemas operacionais testados:** <br/>
+
 Arch Linux 5.18.9-arch1-1 x86_64 GNU/Linux <br/>
 5.17.15-1-MANJARO x86_64 GNU/Linux <br/>
+
 **Compilador:** gcc version 12.1.0 <br/>
 
 ## Comandos
