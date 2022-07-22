@@ -16,7 +16,13 @@ namespace circle_server {
         INVALID_NICKNAME,
         PING,
         INVALID_CHANNEL_NAME,
-        NO_CHANNEL
+        NO_CHANNEL,
+        JOIN_CURRENT_CHANNEL,
+        NEW_ADMIN,
+        NOT_ADMIN,
+        MUTE,
+        KICK,
+        USER_NOT_FOUND
     };
 
     std::string ctrl_message(enum CTRL_MESSAGE _ctrl_message, const std::string &arg = "");

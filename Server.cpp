@@ -104,12 +104,12 @@ namespace circle_server {
                 break;
             }
 
+            client = update_client(client);
+
             clean_str(message_str);
             std::string message(message_str);
 
             if (bytes_received == 0) {
-                print_message(message, client.get_channel());
-
                 if (!client.get_channel().empty()) {
                     message = ctrl_message(LEAVE, { client.get_nickname(), client.get_channel() });
                     send_message(client, message);
@@ -117,10 +117,6 @@ namespace circle_server {
 
                 break;
             } else {
-                if (message.empty()) {
-                    continue;
-                }
-
                 std::vector<std::string> split = split_message(message);
                 std::string command = split[0];
                 std::string argument = split.size() == 2 ? split[1] : "";
@@ -141,25 +137,50 @@ namespace circle_server {
                     send_response_message(client, message);
                     continue;
                 } else if (command == "/join") {
-                    if (validate_channel(argument)) {
-                        message = ctrl_message(JOIN, { client.get_nickname(), argument });
-
+                    if (argument == client.get_channel()) {
+                        message = ctrl_message(JOIN_CURRENT_CHANNEL, argument);
+                        send_response_message(client, message);
+                    } else if (validate_channel(argument)) {
                         if (!client.get_channel().empty()) {
                             remove_client(client);
+                            message = ctrl_message(LEAVE, { client.get_nickname(), client.get_channel() });
+                            send_message(client, message);
                         }
 
+                        bool new_admin = (Server::channels.find(argument) == Server::channels.end());
+
+                        message = ctrl_message(JOIN, { client.get_nickname(), argument });
                         client.set_channel(argument);
                         add_client(client);
                         send_message(client, message);
+
+                        if (new_admin) {
+                            send_response_message(client, ctrl_message(NEW_ADMIN));
+                        }
                     } else {
                         message = ctrl_message(INVALID_CHANNEL_NAME);
                         send_response_message(client, message);
                         continue;
                     }
+                } else if ((command == "/mute" || command == "/unmute") && !client.get_channel().empty()) {
+                    if (client.is_admin()) {
+                        if (!set_mute_client(client, argument, (command == "/mute"))) {
+                            message = ctrl_message(USER_NOT_FOUND, argument);
+                            send_response_message(client, message);
+                        }
+                    } else {
+                        message = ctrl_message(NOT_ADMIN);
+                        send_response_message(client, message);
+                    }
                 } else if (!client.get_channel().empty()) {
-                    message = format_message(client.get_nickname(), message);
-                    print_message(message, client.get_channel());
-                    send_message(client, message);
+                    if (!client.is_mute()) {
+                        message = format_message(client.get_nickname(), message);
+                        print_message(message, client.get_channel());
+                        send_message(client, message);
+                    } else {
+                        message = ctrl_message(MUTE);
+                        send_response_message(client, message);
+                    }
                 } else {
                     message = ctrl_message(NO_CHANNEL);
                     send_response_message(client, message);
@@ -178,7 +199,23 @@ namespace circle_server {
         return nullptr;
     }
 
+    User Server::update_client(User &client) {
+        if (!client.get_channel().empty()) {
+            auto channel = Server::channels.find(client.get_channel());
+            if (channel != Server::channels.end()) {
+                auto channel_users = channel->second;
+                return *(std::find(channel_users.begin(), channel_users.end(), client));
+            }
+        }
+
+        return client;
+    }
+
     void Server::add_client(User &client) {
+        if (client.get_channel().empty()) {
+            return;
+        }
+
         auto channel = Server::channels.find(client.get_channel());
 
         pthread_mutex_lock(&Server::clients_mutex);
@@ -224,6 +261,36 @@ namespace circle_server {
         }
 
         pthread_mutex_unlock(&Server::clients_mutex);
+    }
+
+    bool Server::set_mute_client(User &admin, const std::string &nickname, const bool &mute) {
+        if (admin.get_channel().empty()) {
+            return false;
+        }
+
+        auto channel = Server::channels.find(admin.get_channel());
+
+        if (channel == Server::channels.end()) {
+            return false;
+        }
+
+        std::vector<User> channel_users = channel->second;
+        auto user = std::find_if(channel_users.begin(), channel_users.end(), [&](User &u) {
+           return u.get_nickname() == nickname;
+        });
+
+        if (user == channel_users.end()) {
+            return false;
+        }
+
+        pthread_mutex_lock(&Server::clients_mutex);
+
+        (*user).set_mute(mute);
+        channel->second = channel_users;
+
+        pthread_mutex_unlock(&Server::clients_mutex);
+
+        return true;
     }
 
     void Server::send_message(User &client, const std::string &message) {

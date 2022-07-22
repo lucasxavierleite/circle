@@ -27,7 +27,7 @@ namespace circle_server {
                 message = arg[0] + " joined the channel " + arg[1];
                 break;
             case LEAVE:
-                message = arg[0] + " left the chat" + arg[1];
+                message = arg[0] + " left the channel " + arg[1];
                 break;
             case CHANGE_NICKNAME:
                 message = arg[0] + " changed their nickname to " + arg[1];
@@ -43,6 +43,25 @@ namespace circle_server {
                 break;
             case NO_CHANNEL:
                 message = R"(You need to use "/join" to join a channel in order to send messages and perform other actions. See available commands with "/help")";
+                break;
+            case JOIN_CURRENT_CHANNEL:
+                message = "You already are in the channel " + arg[0];
+                break;
+            case NEW_ADMIN:
+                message = "Congratulations! Since you are the first to arrive here, you are now the channel administrator";
+                break;
+            case NOT_ADMIN:
+                message = "You need administrator privileges to perform this action";
+                break;
+            case MUTE:
+                message = "You were muted by the channel administrator";
+                break;
+            case KICK:
+                message = arg[0] + " was kicked out by the channel administrator " + arg[1];
+                break;
+            case USER_NOT_FOUND:
+                message = "User " + arg[0] + " not found";
+                break;
         }
 
         return ">>> " + message;
