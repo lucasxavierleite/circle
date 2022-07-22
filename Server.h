@@ -11,11 +11,11 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #define DEFAULT_IP_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 9999
 
-#define NICKNAME_MAX_CHARACTERS 50
 #define MESSAGE_MAX_CHARACTERS 4096
 
 #define MAX_CLIENTS_CONNECTED 10
@@ -31,7 +31,7 @@ namespace circle_server {
         static const char *ip_address;
         static int port;
         static pthread_mutex_t clients_mutex;
-        static std::vector<User> clients;
+        static std::map<std::string, std::vector<User>> channels;
         static void *handle_client(void *arg);
         static bool log;
 
@@ -39,8 +39,12 @@ namespace circle_server {
         explicit Server();
         static void set_port(char *&_port);
         static void listen();
+        static User update_client(User &client);
         static void add_client(User &client);
         static void remove_client(User &client);
+        static bool kick_client(User &admin, const std::string &nickname);
+        static bool set_mute_client(User &admin, const std::string &nickname, const bool &mute);
+        static bool get_client_address(User &admin, const std::string &nickname, std::string &address);
         static void send_message(User &client, const std::string &message);
         static void send_response_message(User &client, const std::string &message);
         static void print_log(const std::string &log_message);

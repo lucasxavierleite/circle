@@ -24,10 +24,10 @@ namespace circle_client {
 
         switch (instruction) {
             case INVALID_COMMAND:
-                output = "Invalid command. Type \"/help\" to see the available commands";
+                output = R"(Invalid command. Type "/help" to see the available commands)";
                 break;
             case QUIT:
-                output = "Type \"/quit\" to close the chat";
+                output = R"(Type "/quit" to close the chat)";
                 break;
             default:
                 output = instruction_message;

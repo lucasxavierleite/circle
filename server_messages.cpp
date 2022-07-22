@@ -3,9 +3,12 @@
 #include <netinet/in.h>
 
 #include <iostream>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
-#include <string>
 
 namespace circle_server {
 
@@ -13,34 +16,103 @@ namespace circle_server {
         std::cout << "[ERROR " << errno << "] " << str << ": " << std::strerror(errno) << std::endl;
     }
 
-    std::string ctrl_message(enum CTRL_MESSAGE ctrl_message, const std::string &arg) {
+    std::string ctrl_message(enum CTRL_MESSAGE _ctrl_message, std::vector<std::string> arg) {
         std::string message;
 
-        switch (ctrl_message) {
-            case SERVER_EMPTY:
-                message = "The room is empty :(\n";
-                message += "Waiting for new clients";
+        switch (_ctrl_message) {
+            case WELCOME:
+                message = "Welcome, " + arg[0];
                 break;
-            case CLIENT_ENTER_NICKNAME:
-                message = "Please, enter your nickname: ";
+            case PROVIDE_ARGUMENT:
+                message = "Please provide an argument";
                 break;
-            case CLIENT_JOIN:
-                message = arg + " joined the chat";
+            case JOIN:
+                message = arg[0] + " joined the channel " + arg[1];
                 break;
-            case CLIENT_LEAVE:
-                message = arg + " left the chat";
+            case LEAVE:
+                message = arg[0] + " left the channel " + arg[1];
                 break;
+            case CHANGE_NICKNAME:
+                message = arg[0] + " changed their nickname to " + arg[1];
+                break;
+            case INVALID_NICKNAME:
+                message = "Invalid nickname. Please make sure your nickname contains only up to 50 ASCII characters (special characters are not allowed)";
+                break;
+            case PING:
+                message = "Pong";
+                break;
+            case INVALID_CHANNEL_NAME:
+                message = "Invalid channel. Please make sure the channel name starts with '#' or '&' and doesn't contain commas (',') or blank spaces";
+                break;
+            case NO_CHANNEL:
+                message = R"(You need to use "/join" to join a channel in order to send messages and perform other actions. See available commands with "/help")";
+                break;
+            case JOIN_CURRENT_CHANNEL:
+                message = "You already are in the channel " + arg[0];
+                break;
+            case NEW_ADMIN:
+                message = "Congratulations! Since you are the first to arrive here, you are now the channel administrator";
+                break;
+            case NOT_ADMIN:
+                message = "You need administrator privileges to perform this action";
+                break;
+            case MUTE:
+                message = "You were muted by the channel administrator";
+                break;
+            case KICK:
+                message = arg[0] + " was kicked out by the channel administrator " + arg[1];
+                break;
+            case SELF_KICK:
+                message = R"(Sorry, you can't kick yourself out. Use "/quit" for that)";
+                break;
+            case USER_NOT_FOUND:
+                message = "User " + arg[0] + " not found";
+                break;
+            case WHO_IS:
+                message = arg[0] + " is " + arg[1];
         }
 
-        return message;
+        return ">>> " + message;
+    }
+
+    std::string ctrl_message(enum CTRL_MESSAGE _ctrl_message, const std::string &arg) {
+        std::vector<std::string> argv(1);
+        argv[0] = arg;
+
+        return ctrl_message(_ctrl_message, argv);
+    }
+
+    bool validate_channel(const std::string &channel) {
+        if (channel[0] != '&' && channel[0] != '#') {
+            return false;
+        }
+
+        const std::vector<char> channel_forbidden_chars = { ' ', ',', '\a' };
+
+        return all_of(channel_forbidden_chars.begin(), channel_forbidden_chars.end(), [&](const char &c){
+            return channel.find(c) == std::string::npos;
+        });
+    }
+
+    std::vector<std::string> split_message(const std::string &message) {
+        std::stringstream ss(message);
+
+        std::string token;
+        std::vector<std::string> split;
+
+        while (std::getline(ss, token, ' ')) {
+            split.push_back(token);
+        }
+
+        return split;
     }
 
     std::string format_message(const std::string &nickname, const std::string &message) {
         return nickname + ": " + message;
     }
 
-    void print_message(const std::string &message) {
-        std::cout << message << std::endl;
+    void print_message(const std::string &message, const std::string &channel) {
+        std::cout << "(" << channel << ") " <<  message << std::endl;
     }
 
     void clean_str(char (&str)[]) {
@@ -57,7 +129,7 @@ namespace circle_server {
 
         char ipaddr[16];
         sprintf(ipaddr, "%u.%u.%u.%u", oct_1, oct_2, oct_3, oct_4);
-        return ipaddr;
+        return std::string(ipaddr);
     }
 
 }

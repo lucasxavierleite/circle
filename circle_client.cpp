@@ -21,12 +21,10 @@ int main(int argc, char *argv[]) {
 
     std::string command;
 
-    while (true) {
-        std::cout << "> ";
-        std::cout.flush();
+    std::cout << "> ";
+    std::cout.flush();
 
-        std::cin >> command;
-
+    while (std::cin >> command) {
         if (command == "/connect") {
             try {
                 client.connect();
@@ -37,11 +35,16 @@ int main(int argc, char *argv[]) {
             }
         } else if (command == "/help") {
             circle_client::print_help();
-        } else if (command == "/quit" || std::cin.eof()) {
-            std::cout << std::endl;
-            return 0;
+        } else if (command == "/quit") {
+            break;
         } else {
             print_instruction(circle_client::INVALID_COMMAND);
         }
+
+        std::cout << "> ";
+        std::cout.flush();
     }
+
+    std::cout << std::endl;
+    return 0;
 }
