@@ -1,6 +1,8 @@
 # circle
 IRC application for a Computer Networks assignment at ICMC - USP </br>
 
+[Apresentação do trabalho](https://drive.google.com/file/d/1VmpJvFG03Py8MxPS-njv0ebPKdevGw_N/view?usp=sharing)
+
 Altair Fernando Pereira Junior, 9391831 <br/>
 Osni Brito de Jesus, 11857330 <br/>
 Lucas Xavier Leite, 10783347 <br/>
@@ -44,6 +46,7 @@ Arch Linux 5.18.9-arch1-1 x86_64 GNU/Linux <br/>
 **Compilador:** gcc version 12.1.0 <br/>
 
 ## Comandos
+### Comandos gerais
 - **/connect:** Conecta um novo cliente no servidor (que deve estar em execução)
 - **/quit:** Encerra conexão com o servidor
 - **/ping:** Recebe a mensagem 'pong' do servidor
